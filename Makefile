@@ -111,6 +111,24 @@ gateway-reload:
 	@docker compose -f platform/docker-compose.dev.yaml --env-file platform/.env.dev.sample restart kong && \
 	echo "Kong reloaded."
 
+# Event Bus Management
+bus-bootstrap:
+	@echo "== Redpanda topics =="
+	@bash platform/redpanda/bootstrap-topics.sh || pwsh platform/redpanda/bootstrap-topics.ps1
+	@echo "== RabbitMQ definitions (restart to load) =="
+	@docker compose -f platform/docker-compose.dev.yaml --env-file platform/.env.dev.sample restart rabbitmq
+
+bus-status:
+	@echo "-- Redpanda topics --"
+	@docker compose -f platform/docker-compose.dev.yaml --env-file platform/.env.dev.sample exec -T redpanda rpk topic list
+	@echo "-- RabbitMQ queues --"
+	@curl -s -u $${RABBITMQ_DEFAULT_USER}:$${RABBITMQ_DEFAULT_PASS} http://localhost:15672/api/queues/opas-dev | jq '.[].name'
+
+bus-reset:
+	@echo "!! Dev only: purge queues and recreate topics"
+	@docker compose -f platform/docker-compose.dev.yaml --env-file platform/.env.dev.sample exec -T redpanda rpk topic delete -r opas. -f || true
+	@bash platform/redpanda/bootstrap-topics.sh || pwsh platform/redpanda/bootstrap-topics.ps1
+
 # Testing
 test:
 	@echo "Running all tests..."

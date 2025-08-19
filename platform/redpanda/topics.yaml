@@ -1,0 +1,39 @@
+defaults:
+  partitions: 3
+  retention_ms: 604800000   # 7d
+  cleanup_policy: delete
+  min_insync_replicas: 1
+  replication_factor: 1     # dev
+
+topics:
+  # Domain event streams (multi-tenant; tenant id header'larda)
+  - name: opas.identity.events.v1
+  - name: opas.patient.events.v1
+  - name: opas.catalog.events.v1
+  - name: opas.inventory.events.v1
+  - name: opas.prescription.events.v1
+  - name: opas.payment.events.v1
+  - name: opas.docsprint.events.v1
+  - name: opas.search.events.v1
+  - name: opas.notify.events.v1
+  - name: opas.ai.events.v1
+  - name: opas.audit.events.v1
+
+  # Dead-letter topics (same partitioning)
+  - name: opas.identity.events.dlt.v1
+  - name: opas.patient.events.dlt.v1
+  - name: opas.catalog.events.dlt.v1
+  - name: opas.inventory.events.dlt.v1
+  - name: opas.prescription.events.dlt.v1
+  - name: opas.payment.events.dlt.v1
+  - name: opas.docsprint.events.dlt.v1
+  - name: opas.search.events.dlt.v1
+  - name: opas.notify.events.dlt.v1
+  - name: opas.ai.events.dlt.v1
+  - name: opas.audit.events.dlt.v1
+
+  # Reference/lookup streams (compacted)
+  - name: opas.catalog.ref.v1
+    cleanup_policy: compact
+  - name: opas.identity.ref.v1
+    cleanup_policy: compact

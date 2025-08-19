@@ -1,0 +1,56 @@
+{
+  "vhosts": [{ "name": "opas-dev" }],
+  "permissions": [{
+    "user": "opas",
+    "vhost": "opas-dev",
+    "configure": ".*",
+    "write": ".*",
+    "read": ".*"
+  }],
+  "parameters": [],
+  "policies": [
+    {
+      "vhost": "opas-dev",
+      "name": "ha-none",
+      "pattern": ".*",
+      "definition": { "ha-mode": "nodes", "ha-params": [], "ha-sync-mode": "automatic" },
+      "priority": 0,
+      "apply-to": "queues"
+    }
+  ],
+  "exchanges": [
+    { "name": "cmd.exchange",   "vhost": "opas-dev", "type": "direct", "durable": true },
+    { "name": "work.exchange",  "vhost": "opas-dev", "type": "direct", "durable": true },
+    { "name": "saga.exchange",  "vhost": "opas-dev", "type": "topic",  "durable": true },
+    { "name": "dlx.exchange",   "vhost": "opas-dev", "type": "topic",  "durable": true }
+  ],
+  "queues": [
+    { "name": "cmd.prescription", "vhost": "opas-dev", "durable": true,
+      "arguments": { "x-dead-letter-exchange": "dlx.exchange", "x-dead-letter-routing-key": "cmd.prescription" } },
+    { "name": "cmd.prescription.retry.5m", "vhost": "opas-dev", "durable": true,
+      "arguments": { "x-message-ttl": 300000, "x-dead-letter-exchange": "", "x-dead-letter-routing-key": "cmd.prescription" } },
+
+    { "name": "work.docsprint", "vhost": "opas-dev", "durable": true,
+      "arguments": { "x-dead-letter-exchange": "dlx.exchange", "x-dead-letter-routing-key": "work.docsprint" } },
+    { "name": "work.docsprint.retry.1m", "vhost": "opas-dev", "durable": true,
+      "arguments": { "x-message-ttl": 60000, "x-dead-letter-exchange": "", "x-dead-letter-routing-key": "work.docsprint" } },
+
+    { "name": "saga.prescription.workflow", "vhost": "opas-dev", "durable": true,
+      "arguments": { "x-dead-letter-exchange": "dlx.exchange", "x-dead-letter-routing-key": "saga.prescription" } },
+    { "name": "saga.prescription.retry.30s", "vhost": "opas-dev", "durable": true,
+      "arguments": { "x-message-ttl": 30000, "x-dead-letter-exchange": "", "x-dead-letter-routing-key": "saga.prescription" } },
+
+    { "name": "dlq.cmd.prescription", "vhost": "opas-dev", "durable": true },
+    { "name": "dlq.work.docsprint",   "vhost": "opas-dev", "durable": true },
+    { "name": "dlq.saga.prescription","vhost": "opas-dev", "durable": true }
+  ],
+  "bindings": [
+    { "vhost": "opas-dev", "source": "cmd.exchange",  "destination": "cmd.prescription", "destination_type": "queue", "routing_key": "prescription" },
+    { "vhost": "opas-dev", "source": "work.exchange", "destination": "work.docsprint",   "destination_type": "queue", "routing_key": "docsprint" },
+    { "vhost": "opas-dev", "source": "saga.exchange", "destination": "saga.prescription.workflow", "destination_type": "queue", "routing_key": "prescription.*" },
+
+    { "vhost": "opas-dev", "source": "dlx.exchange",  "destination": "dlq.cmd.prescription", "destination_type": "queue", "routing_key": "cmd.prescription" },
+    { "vhost": "opas-dev", "source": "dlx.exchange",  "destination": "dlq.work.docsprint",   "destination_type": "queue", "routing_key": "work.docsprint" },
+    { "vhost": "opas-dev", "source": "dlx.exchange",  "destination": "dlq.saga.prescription","destination_type": "queue", "routing_key": "saga.prescription" }
+  ]
+}

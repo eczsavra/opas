@@ -1,0 +1,9 @@
+syntax = "proto3";
+package opas.events.prescription.v1;
+
+message PrescriptionCreated {
+  string prescription_id = 1;
+  string patient_id = 2;
+  string doctor_id = 3;
+  string created_at = 4; // RFC3339
+}
