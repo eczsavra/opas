@@ -129,6 +129,32 @@ bus-reset:
 	@docker compose -f platform/docker-compose.dev.yaml --env-file platform/.env.dev.sample exec -T redpanda rpk topic delete -r opas. -f || true
 	@bash platform/redpanda/bootstrap-topics.sh || pwsh platform/redpanda/bootstrap-topics.ps1
 
+# Frontend Development
+web-dev:
+	@echo "Starting web admin development server..."
+	@cd apps/web-admin && pnpm install && pnpm dev
+
+web-dev-mock:
+	@echo "Starting web admin with MSW..."
+	@cd apps/web-admin && pnpm install && NEXT_PUBLIC_ENABLE_MSW=true pnpm dev
+
+web-build:
+	@echo "Building web admin..."
+	@cd apps/web-admin && pnpm install && pnpm build
+
+# Windows-compatible commands
+web-dev-win:
+	@echo "Starting web admin development server (Windows)..."
+	@cd apps\web-admin && pnpm install && pnpm dev
+
+web-dev-mock-win:
+	@echo "Starting web admin with MSW (Windows)..."
+	@cd apps\web-admin && pnpm install && set NEXT_PUBLIC_ENABLE_MSW=true && pnpm dev
+
+web-build-win:
+	@echo "Building web admin (Windows)..."
+	@cd apps\web-admin && pnpm install && pnpm build
+
 # Testing
 test:
 	@echo "Running all tests..."
