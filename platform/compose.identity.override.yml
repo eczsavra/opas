@@ -1,0 +1,25 @@
+﻿services:
+  postgres-shared:
+    # baz compose'ta tanımlı; sadece healthcheck ekliyoruz
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opas -d identity"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+  identity-api:
+    build:
+      context: ..
+      dockerfile: apps/identity-api/Dockerfile
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      IDENTITY_DB_CONN: "Host=postgres-shared;Port=5432;Database=identity;Username=opas_app;Password=opas_app_123;Pooling=true;Minimum Pool Size=0;Maximum Pool Size=20"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      postgres-shared:
+        condition: service_healthy
+    networks:
+      - opas-network
