@@ -1,0 +1,171 @@
+# OPAS - Microservices Platform Coding Standards
+
+## Project Architecture
+- **3-Tier Gateway**: Kong (API Gateway), EMQX (IoT Gateway), Istio (Service Mesh)
+- **Event-Driven**: Redpanda/Kafka + RabbitMQ + Temporal + Debezium
+- **Database**: DB-per-tenant PostgreSQL + Shared DB + OpenSearch + Redis + MinIO
+- **Observability**: OpenTelemetry (OTel) with distributed tracing
+- **Security**: KVKK compliant, Medula fixed IP support
+- **Patterns**: Outbox + Idempotency + Dead Letter Queue (DLQ) mandatory
+
+## Service Naming Convention
+- Use kebab-case for service names: `auth-service`, `user-management`
+- Prefix adapters with `adapter-`: `adapter-medula`, `adapter-sgk`
+- Use descriptive names that reflect business domain
+- Avoid generic names like `api`, `service`, `backend`
+
+## Technology Stack
+- **Backend**: .NET 8 (ASP.NET Core) for main services, Python for AI/ML
+- **Infrastructure**: Kubernetes, Helm, Istio, Kong, EMQX
+- **Event Streaming**: Redpanda/Kafka, RabbitMQ, Temporal
+- **Databases**: PostgreSQL (DB-per-tenant), OpenSearch, Redis, MinIO
+- **Monitoring**: OpenTelemetry, Prometheus, Grafana, Jaeger
+
+## Service Categories
+
+### Core Business Services
+- `identity` - Authentication and user management
+- `patient` - Patient data and records
+- `catalog` - Product and service catalog
+- `inventory` - Stock and inventory management
+- `prescription` - Prescription management
+- `payment` - Payment processing
+- `notify` - Notification services
+
+### BFF (Backend for Frontend)
+- `bff-web` - Web application backend
+- `bff-pos` - Point of sale backend
+
+### Security & Policy
+- `auth-policy` - Authorization policies
+- `consent-privacy` - Privacy and consent management
+
+### Infrastructure Services
+- `tenant-provisioning` - Multi-tenant setup
+- `rules-engine` - Business rules processing
+- `workflow-orchestrator` - Process orchestration
+- `search` - Search functionality
+- `docs-print` - Document generation and printing
+
+### Integration & Adapters
+- `device-bridge` - IoT device integration
+- `adapters/medula` - Medula integration
+- `adapters/sgk` - SGK integration
+- `adapters/eczane` - Pharmacy integration
+- `adapters/laboratuvar` - Laboratory integration
+- `adapters/radiology` - Radiology integration
+- `adapters/fatura` - Billing integration
+
+### Admin & Analytics
+- `super-admin` - Administrative functions
+- `lakehouse-bi` - Business intelligence and analytics
+- `ai-service` - AI/ML services
+
+## Code Organization
+- Follow Domain-Driven Design (DDD) principles
+- Organize by business domain, not technical layers
+- Keep services small and focused on single business capability
+- Use clear service boundaries and avoid tight coupling
+- Implement proper separation of concerns
+
+## API Design
+- Follow RESTful principles for HTTP APIs
+- Use consistent URL patterns: `/api/v1/{resource}`
+- Implement proper HTTP status codes and error handling
+- Use JSON for data exchange
+- Include API versioning strategy
+- Document APIs using OpenAPI/Swagger
+
+## Database Design
+- Each service owns its data (Database per Service pattern)
+- Use DB-per-tenant for multi-tenancy
+- Implement proper data consistency patterns (Saga, CQRS, Event Sourcing)
+- Use database migrations for schema changes
+- Implement Outbox pattern for reliable messaging
+
+## Communication Patterns
+- Prefer asynchronous communication (events, message queues)
+- Use synchronous calls only when necessary
+- Implement circuit breaker pattern for resilience
+- Use service discovery for dynamic service location
+- Implement Idempotency for all operations
+
+## Error Handling
+- Implement comprehensive error handling and logging
+- Use structured logging with correlation IDs
+- Implement retry mechanisms with exponential backoff
+- Provide meaningful error messages without exposing internals
+- Use Dead Letter Queue (DLQ) for failed messages
+
+## Security
+- Implement authentication and authorization at API Gateway level
+- Use JWT tokens for service-to-service communication
+- Validate all inputs and sanitize data
+- Implement rate limiting and throttling
+- Use HTTPS for all external communications
+- KVKK compliance for data privacy
+- Medula fixed IP whitelisting
+
+## Testing
+- Write unit tests for business logic
+- Implement integration tests for service boundaries
+- Use contract testing for service interfaces
+- Implement end-to-end tests for critical user journeys
+- Aim for high test coverage (80%+)
+
+## Monitoring and Observability
+- Implement OpenTelemetry for distributed tracing
+- Use centralized logging (ELK stack, Fluentd)
+- Implement health checks for all services
+- Use metrics collection (Prometheus, Grafana)
+- Set up alerting for critical issues
+
+## Configuration Management
+- Use external configuration management
+- Implement feature flags for gradual rollouts
+- Use environment-specific configurations
+- Keep secrets in secure vaults (HashiCorp Vault, AWS Secrets Manager)
+
+## Deployment and DevOps
+- Use containerization (Docker) for all services
+- Implement CI/CD pipelines for automated deployment
+- Use infrastructure as code (Terraform, CloudFormation)
+- Implement blue-green or canary deployments
+- Use service mesh for advanced networking (Istio, Linkerd)
+
+## Code Quality
+- Follow SOLID principles
+- Use dependency injection
+- Implement proper exception handling
+- Write self-documenting code with clear naming
+- Use code linting and formatting tools
+- Implement code review process
+
+## Performance
+- Implement caching strategies (Redis, Memcached)
+- Use connection pooling for databases
+- Implement proper pagination for large datasets
+- Use CDN for static content
+- Monitor and optimize database queries
+
+## Documentation
+- Maintain up-to-date API documentation
+- Document service dependencies and contracts
+- Keep deployment and operational runbooks
+- Document data models and schemas
+- Maintain architecture decision records (ADRs)
+
+## Language-Specific Guidelines
+- Use consistent coding style across all services
+- Follow language-specific best practices
+- Use appropriate design patterns for the chosen language
+- Implement proper dependency management
+
+## Microservices Anti-patterns to Avoid
+- Don't create distributed monoliths
+- Avoid shared databases between services
+- Don't use synchronous communication for everything
+- Avoid tight coupling between services
+- Don't skip proper monitoring and observability
+- Don't skip Outbox pattern implementation
+- Don't ignore Idempotency requirements
