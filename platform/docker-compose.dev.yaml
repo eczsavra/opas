@@ -1,0 +1,467 @@
+
+services:
+  identity-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opas-identity-api:dev
+    container_name: opas-identity-api
+    environment:
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
+      - DOTNET_ENVIRONMENT=Development
+    ports:
+      - "7001:8080"
+    depends_on:
+      - postgres-shared
+
+
+  postgres-shared:
+    image: postgres:16
+    container_name: opas-postgres-shared
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_shared_data:/var/lib/postgresql/data
+      - ./postgres/init-shared.sql:/docker-entrypoint-initdb.d/init-shared.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - opas-network
+
+  # PostgreSQL - Template Database
+  postgres-template:
+    image: postgres:16
+    container_name: opas-postgres-template
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_TEMPLATE_DB}
+    ports:
+      - "5442:5432"
+    volumes:
+      - postgres_template_data:/var/lib/postgresql/data
+      - ./postgres/init-template.sql:/docker-entrypoint-initdb.d/init-template.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - opas-network
+
+  # Redis
+  redis:
+    image: redis:7
+    container_name: opas-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - opas-network
+
+  # MinIO
+  minio:
+    image: minio/minio:latest
+    container_name: opas-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - opas-network
+
+  # MinIO Client (for initialization)
+  minio-init:
+    image: minio/mc:latest
+    container_name: opas-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      # Alias tanimlamadan baglanmak için:
+      MC_HOST_myminio: http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+    command: ["mb", "--ignore-existing", "myminio/${MINIO_BUCKET_NAME}"]
+    networks:
+      - opas-network
+    restart: "no"
+
+
+  # OpenSearch
+  opensearch:
+    image: opensearchproject/opensearch:2
+    container_name: opas-opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=${OPENSEARCH_JAVA_OPTS}"
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD}"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # OpenSearch Dashboards
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2
+    container_name: opas-opensearch-dashboards
+    environment:
+      - 'OPENSEARCH_HOSTS=["http://opensearch:9200"]'
+      - 'OPENSEARCH_USERNAME=${OPENSEARCH_USERNAME}'
+      - 'OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}'
+    ports:
+      - "5601:5601"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # Redpanda
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: opas-redpanda
+    command: >
+      redpanda start
+      --smp 1
+      --memory 1G
+      --reserve-memory 0M
+      --overprovisioned
+      --node-id 0
+      --check=false
+      --pandaproxy-addr 0.0.0.0:8082
+      --advertise-pandaproxy-addr localhost:8082
+      --kafka-addr 0.0.0.0:9092
+      --advertise-kafka-addr localhost:9092
+      --rpc-addr 0.0.0.0:33145
+      --advertise-rpc-addr localhost:33145
+    ports:
+      - "9092:9092"
+      - "8082:8082"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster info"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # Redpanda Console
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:latest
+    container_name: opas-redpanda-console
+    command: ["sh", "-c", "echo \"${CONSOLE_CONFIG_FILE}\" && /bin/console"]
+    environment:
+      CONFIG_FILEPATH: /etc/redpanda/console.yaml
+    ports:
+      - "8080:8080"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/cluster-config"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: opas-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: -rabbitmq_management load_definitions "/etc/rabbitmq/definitions.json"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # Temporal
+  temporal:
+    image: temporalio/auto-setup:latest
+    container_name: opas-temporal
+    environment:
+      DB: ${TEMPORAL_DB}
+      DB_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PWD: ${POSTGRES_PASSWORD}
+      POSTGRES_SEEDS: postgres-shared
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    ports:
+      - "7233:7233"
+    depends_on:
+      postgres-shared:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 7233"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # Temporal UI
+  temporal-ui:
+    image: temporalio/ui:latest
+    container_name: opas-temporal-ui
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    ports:
+      - "8233:8080"
+    depends_on:
+      temporal:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # EMQX
+  emqx:
+    image: emqx/emqx:5.6.1
+    container_name: opas-emqx
+    environment:
+      EMQX_NAME: emqx
+      EMQX_HOST: localhost
+      EMQX_DASHBOARD_DEFAULT_USERNAME: ${EMQX_DASHBOARD_USERNAME}
+      EMQX_DASHBOARD_DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD}
+    ports:
+      - "1883:1883"
+      - "8883:8883"
+      - "18083:18083"
+    volumes:
+      - emqx_data:/opt/emqx/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- --header='Accept: application/json' --user=${EMQX_DASHBOARD_USERNAME} --password=${EMQX_DASHBOARD_PASSWORD} http://localhost:18083/api/v5/status >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # Vault
+  vault:
+    image: hashicorp/vault:1.16
+    container_name: opas-vault
+    command: server -dev -dev-root-token-id=${VAULT_DEV_ROOT_TOKEN_ID} -dev-listen-address=${VAULT_DEV_LISTEN_ADDRESS}
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID}
+      VAULT_DEV_LISTEN_ADDRESS: ${VAULT_DEV_LISTEN_ADDRESS}
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8200/v1/sys/health?standbyok=true"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: opas-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME}'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: opas-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+    ports:
+      - "3300:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # Loki
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: opas-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/local-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # Jaeger
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: opas-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+      JAEGER_STORAGE_TYPE: ${JAEGER_STORAGE_TYPE}
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:16686/api/services"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    container_name: opas-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "55679:55679"
+    volumes:
+      - ./otel-collector/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:13133/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+  # Kong
+  kong:
+    image: kong:3
+    container_name: opas-kong
+    environment:
+
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8443:8443"
+    volumes:
+      - ./kong/kong.yml:/var/lib/kong/kong.yml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - opas-network
+
+networks:
+  opas-network:
+    driver: bridge
+
+volumes:
+  postgres_shared_data:
+  postgres_template_data:
+  redis_data:
+  minio_data:
+  opensearch_data:
+  redpanda_data:
+  rabbitmq_data:
+  emqx_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+
+

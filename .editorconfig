@@ -1,0 +1,243 @@
+# OPAS - Editor Configuration
+# Ensures consistent coding style across different editors and IDEs
+
+# Top-most EditorConfig file
+root = true
+
+# Default settings for all files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# C# files
+[*.cs]
+indent_size = 4
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C# project files
+[*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj}]
+indent_size = 2
+indent_style = space
+
+# C# solution files
+[*.{sln,sw?}]
+indent_size = 2
+indent_style = space
+
+# XML files
+[*.{props,targets,ruleset,config,nuspec,resx,vsixmanifest,vsct}]
+indent_size = 2
+indent_style = space
+
+# XML project files
+[*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj}]
+indent_size = 2
+indent_style = space
+
+# Python files
+[*.py]
+indent_size = 4
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Python requirements files
+[requirements*.txt]
+indent_size = 4
+indent_style = space
+
+# YAML files
+[*.{yml,yaml}]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# JSON files
+[*.json]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# JavaScript/TypeScript files
+[*.{js,jsx,ts,tsx}]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# HTML files
+[*.{html,htm}]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# CSS/SCSS files
+[*.{css,scss,sass,less}]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+# Shell scripts
+[*.{sh,bash,ps1}]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Docker files
+[Dockerfile*]
+indent_size = 4
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Makefiles
+[Makefile*]
+indent_style = tab
+indent_size = 4
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Git configuration files
+[*.git*]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Kubernetes manifests
+[*.{k8s,k8s.yml,k8s.yaml}]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Helm charts
+[Chart.yaml]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[values*.yaml]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Terraform files
+[*.{tf,tfvars}]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Protocol Buffers
+[*.proto]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# SQL files
+[*.sql]
+indent_size = 4
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Configuration files
+[*.{conf,config,ini}]
+indent_size = 2
+indent_style = space
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Log files (no formatting)
+[*.log]
+indent_style = unset
+indent_size = unset
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+# Binary files (no formatting)
+[*.{exe,dll,so,dylib,pdb,obj,bin,dat}]
+indent_style = unset
+indent_size = unset
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+# Image files (no formatting)
+[*.{png,jpg,jpeg,gif,bmp,ico,svg}]
+indent_style = unset
+indent_size = unset
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+# Archive files (no formatting)
+[*.{zip,tar,gz,rar,7z}]
+indent_style = unset
+indent_size = unset
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset

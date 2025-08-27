@@ -1,0 +1,16 @@
+﻿services:
+  minio-init:
+    image: minio/mc:latest
+    container_name: opas-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    # mc, alias'ı env ile alır; böylece shell gerekmez
+    environment:
+      MC_HOST_myminio: "http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000"
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+    # -p: var ise hata vermez (idempotent)
+    command: ["mb","-p","myminio/${MINIO_BUCKET_NAME}"]
+    restart: "no"
+    networks:
+      - opas-network

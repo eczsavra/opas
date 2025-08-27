@@ -98,16 +98,12 @@ app.MapPost("/auth/login", async (LoginReq req, NpgsqlDataSource db, HttpContext
             "FROM auth.fn_login_email_password(@g::text, @e::citext, @p::text, @ip::inet, @ua::text)", conn);
 
         // Parametreleri düz TEXT veriyoruz; cast’i SQL tarafında yapıyoruz.
-        cmd.Parameters.Add("g",  NpgsqlDbType.Text).Value = req.gln;
-        cmd.Parameters.Add("e",  NpgsqlDbType.Text).Value = req.email;
-        cmd.Parameters.Add("p",  NpgsqlDbType.Text).Value = req.password;
+        cmd.Parameters.Add("g",  NpgsqlTypes.NpgsqlDbType.Text).Value  = req.gln;
+        cmd.Parameters.Add("e",  NpgsqlTypes.NpgsqlDbType.Text).Value  = req.email;      // cast SQL'de
+        cmd.Parameters.Add("p",  NpgsqlTypes.NpgsqlDbType.Text).Value  = req.password;
+        cmd.Parameters.Add("ip", NpgsqlTypes.NpgsqlDbType.Inet).Value  = new NpgsqlTypes.NpgsqlInet(ctx.Connection.RemoteIpAddress ?? IPAddress.Loopback);
+        cmd.Parameters.Add("ua", NpgsqlTypes.NpgsqlDbType.Text).Value  = ctx.Request.Headers.UserAgent.ToString() ?? "api";
 
-        var ip = (ctx.Connection.RemoteIpAddress ?? IPAddress.Loopback).ToString();
-        var ua = string.IsNullOrWhiteSpace(ctx.Request.Headers.UserAgent.ToString())
-                 ? "api" : ctx.Request.Headers.UserAgent.ToString();
-
-        cmd.Parameters.Add("ip", NpgsqlDbType.Text).Value = ip; // p_ip text
-        cmd.Parameters.Add("ua", NpgsqlDbType.Text).Value = ua; // p_user_agent text
 
         await using var r = await cmd.ExecuteReaderAsync();
         if (!await r.ReadAsync()) return Results.Unauthorized();
