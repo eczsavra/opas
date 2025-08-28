@@ -930,3 +930,11 @@ stage/
 *.odt
 *.ods
 *.odp
+
+# allow dev & smoke scripts
+/scripts/**
+!/scripts/
+!/scripts/sql/**
+!/scripts/dev/**
+!/scripts/auth-smoke.ps1
+
