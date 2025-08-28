@@ -6,6 +6,8 @@ using Microsoft.Extensions.Hosting;
 using Npgsql;
 using NpgsqlTypes;
 using AuthContracts;
+using System.Diagnostics;
+using Microsoft.AspNetCore.Routing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +34,38 @@ builder.Services.AddSingleton<NpgsqlDataSource>(sp =>
 });
 
 var app = builder.Build();
+
+app.Use(async (ctx, next) =>
+{
+    // X-Request-Id varsa kullan, yoksa üret
+    var reqId = ctx.Request.Headers.ContainsKey("X-Request-Id")
+        && !string.IsNullOrWhiteSpace(ctx.Request.Headers["X-Request-Id"])
+        ? ctx.Request.Headers["X-Request-Id"].ToString()
+        : Guid.NewGuid().ToString("n");
+
+    ctx.Response.Headers["X-Request-Id"] = reqId;
+
+    var sw = Stopwatch.StartNew();
+    try
+    {
+        await next();
+        sw.Stop();
+        var log = ctx.RequestServices.GetRequiredService<ILoggerFactory>()
+                                     .CreateLogger("ReqLog");
+        log.LogInformation("HTTP {m} {p} -> {s} ({ms} ms) rid={rid}",
+            ctx.Request.Method, ctx.Request.Path, ctx.Response.StatusCode,
+            sw.ElapsedMilliseconds, reqId);
+    }
+    catch (Exception ex)
+    {
+        sw.Stop();
+        var log = ctx.RequestServices.GetRequiredService<ILoggerFactory>()
+                                     .CreateLogger("ReqLog");
+        log.LogError(ex, "HTTP {m} {p} FAILED ({ms} ms) rid={rid}",
+            ctx.Request.Method, ctx.Request.Path, sw.ElapsedMilliseconds, reqId);
+        throw;
+    }
+});
 
 // küçük yardımcılar
 static (IPAddress ip, string ua) Client(HttpContext ctx)
@@ -62,6 +96,39 @@ static IResult PgProblem(Npgsql.PostgresException e)
 
 // health & debug
 app.MapGet("/healthz", () => Results.Ok("OK"));
+
+// --- METRICS (Prometheus düz metin) ---
+app.MapGet("/metrics", (HttpContext ctx) =>
+{
+    ctx.Response.ContentType = "text/plain; charset=utf-8";
+    var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+    var body =
+$@"# HELP opas_identity_up Whether the identity api is up (1) or down (0)
+# TYPE opas_identity_up gauge
+opas_identity_up 1
+# HELP opas_identity_build_info Build info
+# TYPE opas_identity_build_info gauge
+opas_identity_build_info{{version=""0.0.1""}} 1
+# HELP opas_identity_last_scrape_ts Last scrape timestamp (unix)
+# TYPE opas_identity_last_scrape_ts gauge
+opas_identity_last_scrape_ts {now}
+";
+    return Results.Text(body, "text/plain");
+});
+
+// --- DEBUG/ROUTES: tüm kayıtlı rotaları gör ---
+app.MapGet("/debug/routes", (IEnumerable<EndpointDataSource> sources) =>
+{
+    var routes = sources
+        .SelectMany(s => s.Endpoints)
+        .OfType<RouteEndpoint>()
+        .Select(e => e.RoutePattern.RawText)
+        .OrderBy(x => x)
+        .ToArray();
+    return Results.Ok(routes);
+});
+
 
 app.MapGet("/debug/conn", (IConfiguration cfg) =>
 {
