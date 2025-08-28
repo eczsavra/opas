@@ -1,0 +1,154 @@
+﻿_format_version: "3.0"
+_transform: true
+
+# ==== GLOBAL PLUGINS (dev) ====
+plugins:
+  - name: opentelemetry
+    config:
+      endpoint: otel-collector:4317
+      endpoint_protocol: grpc
+      headers: {}
+      resource_attributes:
+        service.name: "opas-edge-kong"
+      tracer:
+        sampling_rate: 1.0
+  - name: request-transformer
+    config:
+      add:
+        headers:
+          - "x-request-id:uuid"
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Authorization
+        - Content-Type
+        - X-Request-Id
+        - X-Tenant-Id
+      exposed_headers:
+        - X-Request-Id
+      credentials: true
+      max_age: 3600
+  - name: rate-limiting
+    config:
+      minute: 600
+      policy: local
+      fault_tolerant: true
+      hide_client_headers: false
+
+# ==== UPSTREAMS (active health + passive) ====
+upstreams:
+  - name: bff-web-up
+    algorithm: round-robin
+    healthchecks:
+      active:
+        http_path: /health
+        healthy:
+          successes: 2
+          interval: 10
+        unhealthy:
+          http_failures: 3
+          tcp_failures: 3
+          timeouts: 3
+          interval: 5
+      passive:
+        unhealthy:
+          http_failures: 3
+    targets:
+      - target: bff-web:8080
+  - name: bff-pos-up
+    algorithm: round-robin
+    healthchecks:
+      active:
+        http_path: /health
+        healthy: { successes: 2, interval: 10 }
+        unhealthy: { http_failures: 3, interval: 5 }
+      passive:
+        unhealthy: { http_failures: 3 }
+    targets:
+      - target: bff-pos:8080
+  - name: payment-up
+    healthchecks: { active: { http_path: /health } }
+    targets:
+      - target: payment:8080
+  - name: adapter-fatura-up
+    healthchecks: { active: { http_path: /health } }
+    targets:
+      - target: adapter-fatura:8080
+
+# ==== SERVICES & ROUTES ====
+services:
+  # Public Web (only via BFF)
+  - name: bff-web-svc
+    host: bff-web-up
+    protocol: http
+    path: /
+    routes:
+      - name: bff-web-api
+        paths:
+          - /api/web
+        strip_path: true
+        methods: [GET,POST,PUT,PATCH,DELETE,OPTIONS]
+        tags: [edge,bff,web]
+  # POS (only via BFF)
+  - name: bff-pos-svc
+    host: bff-pos-up
+    protocol: http
+    path: /
+    routes:
+      - name: bff-pos-api
+        paths:
+          - /api/pos
+        strip_path: true
+        methods: [GET,POST,PUT,PATCH,DELETE,OPTIONS]
+        tags: [edge,bff,pos]
+
+  # Webhooks (PSP / Fatura)
+  - name: payment-webhook-svc
+    host: payment-up
+    protocol: http
+    path: /
+    routes:
+      - name: payment-webhooks
+        paths:
+          - /webhooks/payment
+        strip_path: true
+        methods: [POST]
+        tags: [edge,webhook,payment]
+        plugins:
+          - name: rate-limiting
+            config: { minute: 120, policy: local }
+  - name: adapter-fatura-webhook-svc
+    host: adapter-fatura-up
+    protocol: http
+    path: /
+    routes:
+      - name: fatura-webhooks
+        paths:
+          - /webhooks/invoice
+        strip_path: true
+        methods: [POST]
+        tags: [edge,webhook,fatura]
+        plugins:
+          - name: rate-limiting
+            config: { minute: 60, policy: local }
+
+# ==== UTIL ====
+# Simple status route served by Kong itself
+services:
+  - name: kong-status
+    url: http://127.0.0.1:8001
+    routes:
+      - name: edge-status
+        paths: [/edge/status]
+        methods: [GET]
+        strip_path: true
+        tags: [edge,util]

@@ -1,0 +1,17 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: status-svc
+    url: http://example.com
+    routes:
+      - name: edge-status
+        paths:
+          - /edge/status
+        strip_path: false
+        plugins:
+          - name: request-termination
+            config:
+              status_code: 200
+              content_type: application/json; charset=utf-8
+              body: '{"status":"ok"}'
