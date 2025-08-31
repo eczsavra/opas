@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Identity.Api": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5268",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "IDENTITY_DB_CONN": "Host=localhost;Port=5432;Database=identity;Username=opas;Password=opas"
+      }
+    }
+  }
+}
