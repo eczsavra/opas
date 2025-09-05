@@ -1,18 +1,31 @@
 # .NET
-bin/
-obj/
-**/*.user
-**/*.rsuser
+**/bin/
+**/obj/
+*.user
+*.rsuser
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.sln.docstates
 
 # Node / pnpm
-node_modules/
-.pnpm-store/
-.pnpm-debug.log
+**/node_modules/
+**/.pnpm-store/
+**/.turbo/
+**/dist/
+**/build/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Build outputs / misc
-dist/
-coverage/
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / coverage / artifacts
 *.log
-
-# Docker
-**/*.pid
+logs/
+coverage/
+lcov.info
