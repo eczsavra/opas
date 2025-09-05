@@ -1,5 +1,4 @@
 using System.Net;
-using Microsoft.AspNetCore.Routing;
 using Npgsql;
 using NpgsqlTypes;
 using Prometheus;
@@ -57,7 +56,7 @@ public static class IdentityApiEndpoints
 
                 cmd.Parameters.Add("rt", NpgsqlDbType.Text).Value = req.refresh_token;
 
-                var (ip, ua) = Helpers.Client(ctx);
+                var (ip, ua) = Helpers.Client(ctx.Request);
                 cmd.Parameters.Add("ip", NpgsqlDbType.Text).Value = ip.ToString();
                 cmd.Parameters.Add("ua", NpgsqlDbType.Text).Value = ua;
 
@@ -114,3 +113,5 @@ public static class IdentityApiEndpoints
         return app;
     }
 }
+
+

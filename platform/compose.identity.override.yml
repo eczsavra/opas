@@ -1,11 +1,11 @@
 ﻿services:
   postgres-shared:
-    # baz compose'ta tanımlı; sadece healthcheck ekliyoruz
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U opas -d identity"]
       interval: 10s
       timeout: 3s
       retries: 10
+
   identity-api:
     build:
       context: ..
@@ -22,4 +22,5 @@
       postgres-shared:
         condition: service_healthy
     networks:
-      - opas-network
+      opas-network: {}
+      default: {}
