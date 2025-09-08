@@ -15,20 +15,23 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ENV'leri config'e ekle
-builder.Configuration.AddEnvironmentVariables();
 
+// ENV'leri config'e ekle
+
+// --- CONFIG HELPERS ---
 // --- CONFIG HELPERS ---
 static string GetConn(IConfiguration cfg)
 {
-    var raw = Environment.GetEnvironmentVariable("IDENTITY_DB_CONN")
-             ?? cfg["IDENTITY_DB_CONN"]
-             ?? cfg.GetConnectionString("IdentityDb")
-             ?? "";
+    var raw =
+        cfg.GetConnectionString("IdentityDb") // 1) appsettings(.Development).json
+        ?? cfg["IDENTITY_DB_CONN"]            // 2) config key
+        ?? Environment.GetEnvironmentVariable("IDENTITY_DB_CONN") // 3) ENV (en sonda)
+        ?? "";
     raw = raw.Replace("\u0000", "").Trim();
     if (!string.IsNullOrEmpty(raw) && raw[0] == '\uFEFF') raw = raw[1..].Trim();
     return raw;
 }
+
 
 string issuer   = builder.Configuration["IDENTITY_JWT_ISSUER"]   ?? "http://localhost:7001";
 string audience = builder.Configuration["IDENTITY_JWT_AUDIENCE"] ?? "opas";
@@ -97,12 +100,11 @@ app.MapGet("/debug/conn", (IConfiguration cfg) =>
     return Results.Ok(new { length = cs.Length, preview });
 });
 
-app.MapGet("/db/ping", async (IConfiguration cfg) =>
+app.MapGet("/db/ping", async (NpgsqlDataSource db) =>
 {
     try
     {
-        await using var conn = new NpgsqlConnection(GetConn(cfg));
-        await conn.OpenAsync();
+        await using var conn = await db.OpenConnectionAsync();
         await using var cmd = new NpgsqlCommand("select 1", conn);
         var x = await cmd.ExecuteScalarAsync();
         return Results.Ok(new { ok = true, result = x });
