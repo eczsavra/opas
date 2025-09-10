@@ -61,6 +61,7 @@ builder.Services.AddSingleton(sp =>
     return JwtIssuer.Create(issuer, audience, ttlMin, pem);
 });
 
+
 var app = builder.Build();
 
 // --- küçük yardımcılar ---
@@ -116,23 +117,19 @@ app.MapGet("/db/ping", async (NpgsqlDataSource db) =>
 });
 
 // --- WELL-KNOWN (JWKS + minimal discovery) ---
-app.MapGet("/.well-known/jwks.json", (JwtIssuer jwt) =>
-{
-    return Results.Json(new { keys = new[] { jwt.Jwk } });
-});
+app.MapGet("/.well-known/jwks.json", (JwtIssuer jwt)
+    => Results.Json(new { keys = new[] { jwt.Jwk } }));
 
-app.MapGet("/.well-known/openid-configuration", (HttpContext ctx, JwtIssuer jwt) =>
-{
-    var baseUrl = jwt.Issuer.TrimEnd('/');
-    return Results.Json(new
-    {
-        issuer = jwt.Issuer,
-        jwks_uri = $"{baseUrl}/.well-known/jwks.json",
-        token_endpoint = $"{baseUrl}/auth/login",
-        grant_types_supported = new[] { "password", "refresh_token" },
-        id_token_signing_alg_values_supported = new[] { "RS256" }
-    });
-});
+
+app.MapGet("/.well-known/openid-configuration", (JwtIssuer jwt) =>
+    Results.Json(new {
+      issuer = jwt.Issuer,
+      jwks_uri = $"{jwt.Issuer.TrimEnd('/')}/.well-known/jwks.json",
+      token_endpoint = $"{jwt.Issuer.TrimEnd('/')}/auth/login",
+      grant_types_supported = new[] { "password","refresh_token" },
+      id_token_signing_alg_values_supported = new[] { "RS256" }
+    }));
+
 
 
 // --- AUTH ENDPOINTS ---

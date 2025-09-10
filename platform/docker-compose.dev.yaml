@@ -9,10 +9,13 @@ services:
     environment:
       - ASPNETCORE_URLS=http://0.0.0.0:8080
       - DOTNET_ENVIRONMENT=Development
+      - IDENTITY_DB_CONN=Host=postgres-shared;Port=5432;Database=identity;Username=opas_app;Password=opas_app_123;Pooling=true;Minimum Pool Size=0;Maximum Pool Size=20
     ports:
       - "7001:8080"
     depends_on:
       - postgres-shared
+    networks:
+      - opas-network
 
 
   postgres-shared:

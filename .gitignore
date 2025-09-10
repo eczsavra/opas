@@ -1,23 +1,19 @@
-# .NET
+# build outputs
 **/bin/
 **/obj/
 
-# Node
+# node
 node_modules/
-.pnp.*
-pnpm-lock.yaml
+**/node_modules/
+.pnpm-store/
 
 # IDE
 .vs/
-.vscode/
 .idea/
+.vscode/
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Misc
+# misc
 *.user
 *.suo
-.env
-.env.local
+*.log
+*.cache

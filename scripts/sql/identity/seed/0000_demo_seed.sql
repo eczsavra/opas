@@ -11,13 +11,13 @@ BEGIN
 
   -- user upsert by email (tek rol: admin)
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email='demo@opas.local') THEN
-    INSERT INTO auth.users(tenant_id, email, password_hash, role)
-    VALUES (v_t, 'demo@opas.local', crypt('opas123!', gen_salt('bf')), 'admin');
+    INSERT INTO auth.users(tenant_id, email, password_hash, roles)
+    VALUES (v_t, 'demo@opas.local', crypt('opas123!', gen_salt('bf')), ARRAY['admin']);
   ELSE
     UPDATE auth.users
        SET tenant_id = v_t,
            password_hash = crypt('opas123!', gen_salt('bf')),
-           role = 'admin'
+           roles = ARRAY['admin']
      WHERE email='demo@opas.local';
   END IF;
 END $$;
